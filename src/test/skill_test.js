@@ -79,7 +79,7 @@ describe('GetDayFromTrashes',()=>{
         });
     });
     it('一致：登録情報がotherで発話が標準スロット外',async()=>{
-        let compare = sinon.stub(Client,'compareTwoText').returns(0.8);
+        let compare = sinon.stub(Client,'compareTwoText').returns({match: "野菜ジュース",score:1});
         const request = alexa.request().intent('GetDayFromTrashType')
                             .set('request.locale', 'ja-JP')
                             .set('session.user.accessToken','testdata')
@@ -95,7 +95,7 @@ describe('GetDayFromTrashes',()=>{
         compare.restore();
     });
     it('不一致：登録情報がotherで発話もother（スコアが低い）',async()=>{
-        const compare = sinon.stub(Client,'compareTwoText').returns(0.1);
+        const compare = sinon.stub(Client,'compareTwoText').returns({match: "燃えるゴミ",score:0.1});
         const request = alexa.request().intent('GetDayFromTrashType')
                             .set('request.locale', 'ja-JP')
                             .set('session.user.accessToken','testdata')
@@ -111,7 +111,7 @@ describe('GetDayFromTrashes',()=>{
         compare.restore();
     });
     it('一致：登録情報がotherで発話が標準スロット',async()=>{
-        const compare = sinon.stub(Client,'compareTwoText').returns(0.9);
+        const compare = sinon.stub(Client,'compareTwoText').returns({match: "不燃ごみ",score:0.9});
         const request = alexa.request().intent('GetDayFromTrashType')
                             .set('request.locale', 'ja-JP')
                             .set('session.user.accessToken','testdata2')
@@ -127,7 +127,7 @@ describe('GetDayFromTrashes',()=>{
         compare.restore();
     });
     it('不一致：登録情報がotherで発話がスロット外（スコアが低い）',async()=>{
-        const compare = sinon.stub(Client,'compareTwoText').returns(0.1);
+        const compare = sinon.stub(Client,'compareTwoText').returns({match: "不燃ゴミ",score:0.1});
         const request = alexa.request().intent('GetDayFromTrashType')
                             .set('request.locale', 'ja-JP')
                             .set('session.user.accessToken','testdata2')
@@ -144,8 +144,8 @@ describe('GetDayFromTrashes',()=>{
     });
     it('一致：登録情報が複数のotherで発話が標準スロット外',async()=>{
         const compare = sinon.stub(Client,'compareTwoText');
-        compare.withArgs("ペットボトル","不燃ごみ").returns(0.1);
-        compare.withArgs("ペットボトル","ビンとペットボトル").returns(0.8);
+        compare.withArgs("ペットボトル","不燃ごみ").returns({match: "不燃ごみ", score:0.1});
+        compare.withArgs("ペットボトル","ビンとペットボトル").returns({match: "ペットボトル",score:0.8});
         const request = alexa.request().intent('GetDayFromTrashType')
                             .set('request.locale', 'ja-JP')
                             .set('session.user.accessToken','testdata3')
@@ -158,6 +158,24 @@ describe('GetDayFromTrashes',()=>{
         const response = await request.send();
         // レスポンスは登録データで最も一致率が高かったデータのtrash_val
         assert.equal(response.prompt(), '<speak>次にビンとペットボトルを出せるのは4月4日 木曜日です。</speak>');
+        compare.restore();
+    });
+    it('一致：微妙なスコア(0.5以上0.7未満）の場合',async()=>{
+        const compare = sinon.stub(Client,'compareTwoText');
+        compare.withArgs("ペットボトル","不燃ごみ").returns({match: "不燃ごみ", score:0.1});
+        compare.withArgs("ペットボトル","ビンとペットボトル").returns({match: "ビン",score:0.5});
+        const request = alexa.request().intent('GetDayFromTrashType')
+                            .set('request.locale', 'ja-JP')
+                            .set('session.user.accessToken','testdata3')
+                            .set('request.intent.slots.TrashTypeSlot',
+                                    {
+                                        resolutions: {resolutionsPerAuthority:[{status:{code: 'NO_MATCH'}}]},
+                                        value: 'ペットボトル'
+                                    }
+                                );
+        const response = await request.send();
+        // レスポンスは登録データで最も一致率が高かったデータのtrash_val
+        assert.equal(response.prompt(), '<speak>ビン ですか？次にビンとペットボトルを出せるのは4月4日 木曜日です。</speak>');
         compare.restore();
     });
     it('一致：登録情報がother以外で発話が標準スロット',async()=>{

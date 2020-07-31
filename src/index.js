@@ -347,6 +347,7 @@ const GetDayFromTrashTypeIntent = {
         let trash_data = [];
 
         // otherタイプの登録があれば比較する
+        let speech_prefix = "";
         if(other_trashes.length > 0) {
             const compare_list = [];
             other_trashes.forEach(trash=>{
@@ -358,17 +359,26 @@ const GetDayFromTrashTypeIntent = {
             try {
                 const compare_result = await Promise.all(compare_list);
                 logger.info('compare result:'+JSON.stringify(compare_result));
-                const max_score = Math.max(...compare_result);
-                if(max_score >= 0.7) {
-                    const index = compare_result.indexOf(max_score);
-                    trash_data = client.getDayFromTrashType([other_trashes[index]],'other');
+                const max_data = {trash: "",score: 0, index: 0};
+                compare_result.forEach((result,index)=>{
+                    if(result.score >= max_data.score) {
+                        max_data.trash = result.match
+                        max_data.score = result.score
+                        max_data.index = index
+                    }
+                });
+                if(max_data.score >= 0.5) {
+                    if(max_data.score < 0.7 && max_data.score >= 0.5) {
+                        speech_prefix = `${max_data.trash} ですか？`;
+                    }
+                    trash_data = client.getDayFromTrashType([other_trashes[max_data.index]],'other');
                 }
             } catch(error) {
                 logger.error(error);
                 return responseBuilder.speak(textCreator.unknown_error).withShouldEndSession(true).getResponse();
             }
         }
-        responseBuilder.speak(textCreator.getDayFromTrashTypeMessage({id: 'other', name: speeched_trash}, trash_data));
+        responseBuilder.speak(speech_prefix + textCreator.getDayFromTrashTypeMessage({id: 'other', name: speeched_trash}, trash_data));
 
         await setUpSellMessage(handlerInput, responseBuilder);
         return responseBuilder.getResponse();

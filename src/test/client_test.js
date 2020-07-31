@@ -727,7 +727,8 @@ describe('getTrashData', function () {
 describe('compareTwoText',()=>{
     it('正常データ',done=>{
         Client.compareTwoText('資源ごみ','資源ごみ').then(result=>{
-            assert.equal(result,1)
+            assert.equal(result.match,'資源ごみ')
+            assert.ok(result.score>0)
             done();
         }).catch(err=>{
             assert.fail(err);

@@ -12,6 +12,8 @@ const logger = common.getLogger();
 logger.LEVEL = process.env.RUNLEVEL === "INFO" ? logger.INFO : logger.DEBUG;
 
 const crypto = require("crypto");
+const MessagePack = require("what-the-pack");
+const {encode,decode} = MessagePack.initialize(2**22);
 
 const toHash = (value) => {
     return crypto.createHash("sha512").update(value).digest("hex");
@@ -357,14 +359,13 @@ class Client {
             const option = {
                 uri: process.env.MecabAPI_URL + '/compare',
                 qs: {
-                    text1: text1,
-                    text2: text2
+                    word1: text1,
+                    word2: text2
                 },
-                json: true
+                encoding: null
             };
-            logger.info('Compare option:'+JSON.stringify(option));
             return rp(option).then(response => {
-                return response.score;
+                return decode(response);
             }).catch(err => {
                 logger.error(err);
                 throw err;
